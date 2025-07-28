@@ -1,49 +1,35 @@
-// src/App.jsx
-import React, { useState, useEffect } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import login from './pages/login';
+import signup from './pages/signup';
+import Home from './pages/Home';
+import History from './pages/History';
+import Starred from './pages/Starred';
+import Navbar from './components/Navbar';
 
 const App = () => {
-  const [scans, setScans] = useState(() => {
-    const stored = JSON.parse(localStorage.getItem("qrScans")) || [];
-    const now = Date.now();
-    return stored.filter(scan => now - scan.timestamp < 86400000); // filter old
-  });
+  const [user, setUser] = useState(localStorage.getItem('user'));
 
   useEffect(() => {
-    const scanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
-
-    scanner.render(
-      (decodedText) => {
-        const now = Date.now();
-        const newScan = { text: decodedText, timestamp: now };
-
-        setScans(prev => {
-          if (prev.length >= 50) return prev;
-          const updated = [...prev, newScan];
-          localStorage.setItem("qrScans", JSON.stringify(updated));
-          return updated;
-        });
-
-        scanner.clear();
-      },
-      (err) => console.warn("QR Scan Error:", err)
-    );
-
-    return () => scanner.clear();
+    const handleStorageChange = () => {
+      setUser(localStorage.getItem('user'));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>QR Code Scan Tracker</h1>
-      <div id="qr-reader" style={{ width: "300px", marginBottom: "20px" }}></div>
-
-      <h2>Today's Scans ({scans.length}/50)</h2>
-      <ul>
-        {scans.map((scan, index) => (
-          <li key={index}>{scan.text}</li>
-        ))}
-      </ul>
-    </div>
+    <Router>
+      {user && <Navbar />}
+      <Routes>
+        <Route path="/" element={!user ? <Login /> : <Navigate to="/home" />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/home" element={user ? <Home /> : <Navigate to="/" />} />
+        <Route path="/history" element={user ? <History /> : <Navigate to="/" />} />
+        <Route path="/starred" element={user ? <Starred /> : <Navigate to="/" />} />
+        <Route path="*" element={<Navigate to={user ? '/home' : '/'} />} />
+      </Routes>
+    </Router>
   );
 };
 
